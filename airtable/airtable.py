@@ -108,7 +108,7 @@ class Airtable(object):
     API_URL = posixpath.join(API_BASE_URL, VERSION)
     MAX_RECORDS_PER_REQUEST = 10
 
-    def __init__(self, base_id, table_name, api_key, timeout=None):
+    def __init__(self, base_id, table_name, api_key, api_limit=5, timeout=None):
         """
         Instantiates a new Airtable instance
 
@@ -129,6 +129,8 @@ class Airtable(object):
                 parameters to be used in request. `See requests timeout docs.
                 <https://requests.readthedocs.io/en/master/user/advanced/#timeouts>`_
 
+            api_limit (``int``, optional): Optinal API limit changer
+
         """
         session = requests.Session()
         session.auth = AirtableAuth(api_key=api_key)
@@ -137,6 +139,10 @@ class Airtable(object):
         url_safe_table_name = quote(table_name, safe="")
         self.url_table = posixpath.join(self.API_URL, base_id, url_safe_table_name)
         self.timeout = timeout
+        self.API_LIMIT = 1.0 / api_limit
+
+    def update_api_limit(self, api_limit):
+        self.API_LIMIT = 1.0 / api_limit
 
     def _process_params(self, params):
         """
@@ -587,7 +593,7 @@ class Airtable(object):
         >>> airtable.batch_delete(records_ids)
 
         Args:
-            records(``list``): Record Ids to delete
+            record_ids(``list``): Record Ids to delete
 
         Returns:
             records(``list``): list of records deleted
