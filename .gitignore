@@ -15,3 +15,5 @@ docs/build
 coverage.xml
 .coverage
 test.py
+
+.idea/
