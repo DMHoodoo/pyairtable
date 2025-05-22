@@ -98,6 +98,22 @@ from urllib.parse import quote
 
 from .auth import AirtableAuth
 from .params import AirtableParams
+import time
+import functools
+import logging
+
+def profile_time(func):
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        url = args[1]
+        start_time = time.perf_counter()
+        result = func(*args, **kwargs)
+        end_time = time.perf_counter()
+        duration = end_time - start_time
+
+        logging.info(f"[PROFILE] -- {func.__name__} - {url} - {duration:.4f}s")
+        return result
+    return wrapper
 
 
 class Airtable(object):
@@ -192,22 +208,28 @@ class Airtable(object):
         )
         return self._process_response(response)
 
+    @profile_time
     def _get(self, url, **params):
         processed_params = self._process_params(params)
         return self._request("get", url, params=processed_params)
 
+    @profile_time
     def _post(self, url, json_data):
         return self._request("post", url, json_data=json_data)
 
+    @profile_time
     def _put(self, url, json_data):
         return self._request("put", url, json_data=json_data)
 
+    @profile_time
     def _patch(self, url, json_data):
         return self._request("patch", url, json_data=json_data)
 
+    @profile_time
     def _delete(self, url):
         return self._request("delete", url)
 
+    @profile_time
     def _delete_batch(self, record_ids):
         if len(record_ids) == 1:
             return self.delete(record_ids[0])
@@ -391,9 +413,9 @@ class Airtable(object):
             self.url_table, json_data={"fields": fields, "typecast": typecast}
         )
 
-    def batch_insert(self, records, typecast=False):
+    def batch_insert(self, records, typecast=False, log=True):
         """
-        Breaks records into chunks of 10 and inserts them in batches.
+        Breaks records into chunks of 10 and4 inserts them in batches.
         Follows the set API rate.
         To change the rate limit use ``airtable.API_LIMIT = 0.2``
         (5 per second)
@@ -409,7 +431,12 @@ class Airtable(object):
             records (``list``): list of added records
         """
         inserted_records = []
+        i = 0
+        len_recs = len(records)
         for chunk in self._chunk(records, self.MAX_RECORDS_PER_REQUEST):
+            i += len(chunk)
+            if log:
+                logging.info(f"{i}/{len_recs} records inserted")
             new_records = self._build_batch_record_objects(chunk)
             response = self._post(
                 self.url_table, json_data={"records": new_records, "typecast": typecast}
@@ -441,7 +468,7 @@ class Airtable(object):
             record_url, json_data={"fields": fields, "typecast": typecast}
         )
 
-    def batch_update(self, records, typecast=False):
+    def batch_update(self, records, typecast=False, log=True):
         """
         Updates a records by their record id's in batch.
 
@@ -453,7 +480,12 @@ class Airtable(object):
             records(``list``): list of updated records
         """
         updated_records = []
+        i = 0
+        len_recs = len(records)
         for chunk in self._chunk(records, self.MAX_RECORDS_PER_REQUEST):
+            i += len(chunk)
+            if log:
+                logging.info(f"{i}/{len_recs} records updated")
             chunk_records = [{"id": x["id"], "fields": x["fields"]} for x in chunk]
             response = self._patch(
                 self.url_table, json_data={"records": chunk_records, "typecast": typecast}
@@ -582,7 +614,7 @@ class Airtable(object):
         record_url = self.record_url(record["id"])
         return self._delete(record_url)
 
-    def batch_delete(self, record_ids):
+    def batch_delete(self, record_ids, log=True):
         """
         Breaks records into batches of 10 and deletes in batches, following set
         API Rate Limit (5/sec).
@@ -601,7 +633,12 @@ class Airtable(object):
         """
         chunks = self._chunk(record_ids, self.MAX_RECORDS_PER_REQUEST)
         deleted_records = []
+        i = 0
+        len_recs = len(record_ids)
         for chunk in chunks:
+            i += len(chunk)
+            if log:
+                logging.info(f"{i}/{len_recs} deleted")
             response = self._delete_batch(chunk)
             deleted_records += response["records"] if len(chunk) > 1 else [response]
             time.sleep(self.API_LIMIT)
