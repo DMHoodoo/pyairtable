@@ -324,11 +324,13 @@ class Airtable(object):
 
         """
         all_records = []
+        i = 0
         for records in self.get_iter(**options):
             if self.LOG_STDOUT:
                 mess = f"{len(records)} retrieved."
+                i += len(records)
                 logging.info(mess)
-                print(mess)
+                print(mess, end='\r')
 
             all_records.extend(records)
         return all_records
@@ -446,7 +448,7 @@ class Airtable(object):
                 mess = f"{i}/{len_recs} records inserted"
                 logging.info(mess)
                 if self.LOG_STDOUT:
-                    print(mess)
+                    print(mess, end='\r')
             new_records = self._build_batch_record_objects(chunk)
             response = self._post(
                 self.url_table, json_data={"records": new_records, "typecast": typecast}
@@ -498,7 +500,7 @@ class Airtable(object):
                 mess = f"{i}/{len_recs} records updated"
                 logging.info(mess)
                 if self.LOG_STDOUT:
-                    print(mess)
+                    print(mess, end='\r')
             chunk_records = [{"id": x["id"], "fields": x["fields"]} for x in chunk]
             response = self._patch(
                 self.url_table, json_data={"records": chunk_records, "typecast": typecast}
@@ -654,7 +656,7 @@ class Airtable(object):
                 mess = f"{i}/{len_recs} deleted"
                 logging.info(mess)
                 if self.LOG_STDOUT:
-                    print(mess)
+                    print(mess, end='\r')
 
             response = self._delete_batch(chunk)
             deleted_records += response["records"] if len(chunk) > 1 else [response]
