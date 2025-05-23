@@ -93,7 +93,6 @@ similar to this:
 import requests
 from collections import OrderedDict
 import posixpath
-import time
 from urllib.parse import quote
 
 from .auth import AirtableAuth
@@ -101,6 +100,7 @@ from .params import AirtableParams
 import time
 import functools
 import logging
+import os
 
 def profile_time(func):
     @functools.wraps(func)
@@ -123,6 +123,7 @@ class Airtable(object):
     API_LIMIT = 1.0 / 5  # 5 per second
     API_URL = posixpath.join(API_BASE_URL, VERSION)
     MAX_RECORDS_PER_REQUEST = 10
+    LOG_STDOUT = os.environ.get("local_setup")
 
     def __init__(self, base_id, table_name, api_key, api_limit=5, timeout=None):
         """
@@ -323,6 +324,11 @@ class Airtable(object):
         """
         all_records = []
         for records in self.get_iter(**options):
+            if self.LOG_STDOUT:
+                mess = f"{len(records)} retrieved."
+                logging.info(mess)
+                print(mess)
+
             all_records.extend(records)
         return all_records
 
@@ -436,7 +442,10 @@ class Airtable(object):
         for chunk in self._chunk(records, self.MAX_RECORDS_PER_REQUEST):
             i += len(chunk)
             if log:
-                logging.info(f"{i}/{len_recs} records inserted")
+                mess = f"{i}/{len_recs} records inserted"
+                logging.info(mess)
+                if self.LOG_STDOUT:
+                    print(mess)
             new_records = self._build_batch_record_objects(chunk)
             response = self._post(
                 self.url_table, json_data={"records": new_records, "typecast": typecast}
@@ -485,7 +494,10 @@ class Airtable(object):
         for chunk in self._chunk(records, self.MAX_RECORDS_PER_REQUEST):
             i += len(chunk)
             if log:
-                logging.info(f"{i}/{len_recs} records updated")
+                mess = f"{i}/{len_recs} records updated"
+                logging.info(mess)
+                if self.LOG_STDOUT:
+                    print(mess)
             chunk_records = [{"id": x["id"], "fields": x["fields"]} for x in chunk]
             response = self._patch(
                 self.url_table, json_data={"records": chunk_records, "typecast": typecast}
@@ -638,7 +650,11 @@ class Airtable(object):
         for chunk in chunks:
             i += len(chunk)
             if log:
-                logging.info(f"{i}/{len_recs} deleted")
+                mess = f"{i}/{len_recs} deleted"
+                logging.info(mess)
+                if self.LOG_STDOUT:
+                    print(mess)
+
             response = self._delete_batch(chunk)
             deleted_records += response["records"] if len(chunk) > 1 else [response]
             time.sleep(self.API_LIMIT)
