@@ -327,7 +327,7 @@ class Airtable(object):
         i = 0
         for records in self.get_iter(**options):
             if self.LOG_STDOUT:
-                mess = f"{len(records)} retrieved."
+                mess = f"{i} retrieved."
                 i += len(records)
                 logging.info(mess)
                 print(mess, end='\r')
