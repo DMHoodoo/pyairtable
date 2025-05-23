@@ -123,7 +123,7 @@ class Airtable(object):
     API_LIMIT = 1.0 / 5  # 5 per second
     API_URL = posixpath.join(API_BASE_URL, VERSION)
     MAX_RECORDS_PER_REQUEST = 10
-    LOG_STDOUT = os.environ.get("local_setup")
+    LOG_STDOUT = False
 
     def __init__(self, base_id, table_name, api_key, api_limit=5, timeout=None):
         """
@@ -157,6 +157,7 @@ class Airtable(object):
         self.url_table = posixpath.join(self.API_URL, base_id, url_safe_table_name)
         self.timeout = timeout
         self.API_LIMIT = 1.0 / api_limit
+        self.LOG_STDOUT = os.environ.get("local_setup")
 
     def update_api_limit(self, api_limit):
         self.API_LIMIT = 1.0 / api_limit
